@@ -79,8 +79,10 @@ export interface AIAnalysisSummary {
   subsidenceVelocityDegPerHr: number;
 }
 
-export type DemoScenario = 
-  | 'DEFAULT_DEMO' 
-  | 'ROCKBURST_SUBSIDENCE' 
-  | 'METHANE_OUTBURST' 
+export type DemoScenario =
+  | 'DEFAULT_DEMO'
+  | 'ROCKBURST_SUBSIDENCE'
+  | 'METHANE_OUTBURST'
+  | 'FAULT_SHEAR_ACCELERATION'
+  | 'ALL_SAFE_BASELINE'
   | 'ALL_CLEAR_SAFE';

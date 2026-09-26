@@ -5,6 +5,8 @@ import { audioAlarmService } from '../services/audioAlarm';
 interface HeaderProps {
   mode: 'SIMULATION' | 'LIVE_GATEWAY';
   gatewayUrl: string;
+  isWokwiLive?: boolean;
+  packetCount?: number;
   onSelectMode: (mode: 'SIMULATION' | 'LIVE_GATEWAY') => void;
   onOpenGatewayModal: () => void;
 }
@@ -12,6 +14,8 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   mode,
   gatewayUrl,
+  isWokwiLive = false,
+  packetCount = 0,
   onSelectMode,
   onOpenGatewayModal,
 }) => {
@@ -57,12 +61,29 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div className="header-controls">
-        {/* Gateway connection pill */}
-        <div className="connection-pill">
-          <div className="status-dot active-pulse" />
-          <span>
-            {mode === 'SIMULATION'
-              ? 'SIMULATION ENGINE (WOKWI SYNC)'
+        {/* Live Wokwi Hardware Link Pill */}
+        <div
+          className="connection-pill"
+          style={{
+            background: isWokwiLive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(30, 41, 59, 0.6)',
+            borderColor: isWokwiLive ? 'rgba(16, 185, 129, 0.5)' : '#334155',
+            cursor: 'pointer',
+          }}
+          onClick={onOpenGatewayModal}
+          title="Click to view Live Gateway configuration"
+        >
+          <div
+            className="status-dot active-pulse"
+            style={{
+              backgroundColor: isWokwiLive ? '#10b981' : '#f59e0b',
+              boxShadow: isWokwiLive ? '0 0 10px #10b981' : '0 0 10px #f59e0b',
+            }}
+          />
+          <span style={{ color: isWokwiLive ? '#34d399' : '#cbd5e1', fontWeight: 600 }}>
+            {isWokwiLive
+              ? `LIVE WOKWI HARDWARE (ESP32-S3: 4001) • ${packetCount} PKTS`
+              : mode === 'SIMULATION'
+              ? 'SIMULATION ENGINE (INTERNAL PHYSICS)'
               : `GATEWAY: ${gatewayUrl}`}
           </span>
         </div>

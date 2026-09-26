@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, MapPin, Radio, Volume2 } from 'lucide-react';
+import { AlertTriangle, MapPin, Radio, Volume2, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { AlarmState } from '../types';
 
 interface CriticalAlertHeroProps {
@@ -15,101 +15,146 @@ export const CriticalAlertHero: React.FC<CriticalAlertHeroProps> = ({ alarm, onF
   }
 
   const isDanger = mode === 'DANGER';
-
-  // Section 5 explanation logic
   const isMultiWarningDanger = isDanger && activeNode.warning_sensors >= 3 && activeNode.critical_sensors === 0;
 
   return (
-    <section className={`alert-hero ${!isDanger ? 'warning-theme' : ''}`}>
-      <div className="alert-hero-content">
-        <div className="alert-icon-ring">
-          <AlertTriangle size={32} />
-        </div>
-
-        <div className="alert-heading-block">
-          <div className="alert-tag-line">
-            <span className="alert-badge">
-              {isDanger ? 'DGMS CRITICAL EVACUATION PROTOCOL' : 'MINE PRE-HAZARD WARNING PROTOCOL'}
-            </span>
-            <span style={{ fontFamily: 'JetBrains Mono', fontSize: '0.85rem', color: isDanger ? '#fca5a5' : '#fde68a' }}>
-              <Volume2 size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />
-              {isDanger
-                ? `ACTIVE AUDIBLE LOCATOR: ${activeNode.node} ONLY (3000 Hz Continuous Siren)`
-                : `ACOUSTIC SIREN: STANDBY (ACTIVE STRICTLY ON CRITICAL / DANGER)`}
-            </span>
-          </div>
-
-          <div className="alert-title">
+    <section className={`alert-hero-master ${!isDanger ? 'warning-theme' : 'danger-theme'}`}>
+      <div className="alert-hero-header-banner">
+        <div className="alert-badge-group">
+          <span className="emergency-badge">
+            <AlertTriangle size={16} />
+            {isDanger ? 'CRITICAL EVACUATION PROTOCOL' : 'MINE PRE-HAZARD WARNING'}
+          </span>
+          <span className="buzzer-status-pill">
+            <Volume2 size={15} />
             {isDanger
-              ? `CRITICAL CONDITION DETECTED AT ${activeNode.node}`
-              : `ELEVATED SENSOR READINGS AT ${activeNode.node}`}
-          </div>
+              ? `ACTIVE AUDIBLE LOCATOR: ${activeNode.node} ONLY (3000 Hz Continuous Siren on GPIO 10)`
+              : `ACOUSTIC SIREN: STANDBY (Active strictly on Critical/Danger)`}
+          </span>
+        </div>
 
-          <div className="alert-description">
-            {isMultiWarningDanger ? (
-              <>
-                <strong>{activeNode.node}</strong> has triggered the DANGER condition because{' '}
-                <strong>5 warning-level sensors are occurring simultaneously</strong> (Temperature, Pressure drop, Gas,
-                Tilt, and Load). Risk score: <strong>{activeNode.risk_score}/100</strong>. Continuous 3 kHz audible
-                siren is active on {activeNode.node}. All other buzzers forced OFF.
-              </>
-            ) : isDanger ? (
-              <>
-                <strong>{activeNode.node}</strong> has crossed critical geotechnical thresholds. Risk score:{' '}
-                <strong>{activeNode.risk_score}/100</strong>. Continuous 3 kHz audible siren active on {activeNode.node}.
-              </>
-            ) : (
-              <>
-                Elevated gas indicator observed on <strong>{activeNode.node}</strong> (
-                <strong>{activeNode.gas_ppm_equiv.toFixed(0)} ppm-equiv</strong>). Siren is standby (activates strictly on critical). Transmission accelerated to 15s.
-              </>
-            )}
-          </div>
+        <div className="alert-meta-right">
+          <span className="firmware-tag">FIRMWARE DECISION ENGINE: VANGUARD-S3</span>
+        </div>
+      </div>
 
-          <div className="alert-metrics-strip">
-            <div className="alert-metric-item">
-              <span className="label">Node ID</span>
-              <span className="val" style={{ color: isDanger ? '#ef4444' : '#f59e0b' }}>
-                {activeNode.node}
-              </span>
-            </div>
-
-            <div className="alert-metric-item">
-              <span className="label">GPS Coordinates</span>
-              <span className="val">
-                {activeNode.latitude.toFixed(6)}, {activeNode.longitude.toFixed(6)}
-              </span>
-            </div>
-
-            <div className="alert-metric-item">
-              <span className="label">Tilt / Load</span>
-              <span className="val">
-                {activeNode.tilt_deg.toFixed(2)}° / {activeNode.load_kg.toFixed(2)} kg
-              </span>
-            </div>
-
-            <div className="alert-metric-item">
-              <span className="label">Gas Indicator</span>
-              <span className="val">{activeNode.gas_ppm_equiv.toFixed(0)} ppm-equiv</span>
-            </div>
-
-            <div className="alert-metric-item">
-              <span className="label">TX Interval</span>
-              <span className="val" style={{ color: '#38bdf8' }}>
-                <Radio size={12} style={{ display: 'inline', marginRight: '4px' }} />
-                Every {activeNode.sample_interval_seconds}s
-              </span>
+      <div className="alert-main-content">
+        {/* Giant Headline */}
+        <div className="alert-hero-title">
+          <span className="alert-icon-giant">🚨</span>
+          <div>
+            <h1>CRITICAL ALERT — {activeNode.node}</h1>
+            <div className="alert-headline-subtitle">
+              Multiple abnormal conditions detected simultaneously
             </div>
           </div>
         </div>
 
-        <div className="alert-actions-block">
+        {/* 5 Prominent Core Parameters Strip */}
+        <div className="alert-core-grid">
+          <div className="alert-core-card primary-danger">
+            <span className="core-label">RISK SCORE</span>
+            <span className="core-val">{activeNode.risk_score} / 100</span>
+            <span className="core-sub">Elevated via Collective Warning Model</span>
+          </div>
+
+          <div className="alert-core-card">
+            <span className="core-label">GPS LOCATION</span>
+            <span className="core-val mono">
+              {activeNode.latitude.toFixed(6)}, {activeNode.longitude.toFixed(6)}
+            </span>
+            <span className="core-sub">Sector 3 Fault Shear Extraction Zone</span>
+          </div>
+
+          <div className="alert-core-card highlight-cyan">
+            <span className="core-label">TRANSMISSION CADENCE</span>
+            <span className="core-val">
+              <Radio size={15} style={{ display: 'inline', marginRight: '6px' }} />
+              Every {activeNode.sample_interval_seconds} seconds
+            </span>
+            <span className="core-sub">⚡ Adaptive High-Frequency Emergency Rate</span>
+          </div>
+
+          <div className="alert-core-card warn-count">
+            <span className="core-label">WARNING SENSOR COUNT</span>
+            <span className="core-val text-amber">{activeNode.warning_sensors}</span>
+            <span className="core-sub">5 Parameters at Warning Level</span>
+          </div>
+
+          <div className="alert-core-card crit-count">
+            <span className="core-label">CRITICAL SENSOR COUNT</span>
+            <span className="core-val text-slate">{activeNode.critical_sensors}</span>
+            <span className="core-sub">0 Individual Critical Crossings</span>
+          </div>
+        </div>
+
+        {/* Essential Rule Breakdown: WHY? */}
+        <div className="alert-why-box">
+          <div className="why-box-header">
+            <span className="why-badge">GEOTECHNICAL ANOMALY CAUSE ANALYSIS</span>
+            <span className="why-rule">
+              FIRMWARE RULE: IF (critical_sensors &gt; 0) OR (warning_sensors &gt;= 3) → STATUS = DANGER
+            </span>
+          </div>
+
+          <div className="why-text">
+            <strong>{activeNode.node}</strong> is classified as <strong>DANGER</strong> because{' '}
+            <strong>5 monitored indicators are simultaneously at warning level</strong>.
+            Notice the crucial distinction: it is <em>not</em> 5 critical sensors (
+            <code>critical_sensors = 0</code>, <code>warning_sensors = 5</code>).
+            The firmware risk engine elevates co-occurring warnings to DANGER status and accelerates telemetry
+            to the 3-second emergency interval.
+          </div>
+
+          {/* 5 Warning Indicators Row */}
+          <div className="why-indicators-row">
+            <div className="indicator-chip warn">
+              <span className="ind-name">Temperature</span>
+              <span className="ind-val">{activeNode.temperature.toFixed(1)} °C</span>
+              <span className="ind-badge">WARNING ⚠️</span>
+            </div>
+
+            <div className="indicator-chip warn">
+              <span className="ind-name">Barometric Pressure</span>
+              <span className="ind-val">{activeNode.pressure.toFixed(0)} Pa</span>
+              <span className="ind-badge">WARNING ⚠️</span>
+            </div>
+
+            <div className="indicator-chip warn">
+              <span className="ind-name">Gas Concentration</span>
+              <span className="ind-val">{activeNode.gas_ppm_equiv.toFixed(0)} ppm-eq</span>
+              <span className="ind-badge">WARNING ⚠️</span>
+            </div>
+
+            <div className="indicator-chip warn">
+              <span className="ind-name">Inclinometer Tilt</span>
+              <span className="ind-val">{activeNode.tilt_deg.toFixed(2)}°</span>
+              <span className="ind-badge">WARNING ⚠️</span>
+            </div>
+
+            <div className="indicator-chip warn">
+              <span className="ind-name">Roof Strata Load</span>
+              <span className="ind-val">{activeNode.load_kg.toFixed(2)} kg</span>
+              <span className="ind-badge">WARNING ⚠️</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Button Strip */}
+        <div className="alert-footer-actions">
+          <div className="alert-beacon-note">
+            <ShieldAlert size={16} color="#ef4444" />
+            <span>
+              <strong>Physical Verification:</strong> The simulated buzzer on ESP32 GPIO 10 and this GIS Map both pinpoint {activeNode.node}.
+            </span>
+          </div>
+
           <button
-            className={isDanger ? 'btn-evacuate' : 'btn-action'}
+            className="btn-locate-master"
             onClick={() => onFocusMap(activeNode.latitude, activeNode.longitude, activeNode.node)}
           >
             <MapPin size={16} />
-            Locate Across GIS & Strata
+            Locate {activeNode.node} on GIS Map ({activeNode.latitude.toFixed(6)}, {activeNode.longitude.toFixed(6)})
           </button>
         </div>
       </div>

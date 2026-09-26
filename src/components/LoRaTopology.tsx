@@ -1,5 +1,5 @@
 import React from 'react';
-import { Radio } from 'lucide-react';
+import { Radio, ArrowRight, Server, Laptop, Wifi } from 'lucide-react';
 import { NodeData } from '../types';
 
 interface LoRaTopologyProps {
@@ -10,77 +10,88 @@ interface LoRaTopologyProps {
 
 export const LoRaTopology: React.FC<LoRaTopologyProps> = ({ nodes, selectedNodeId, onSelectNode }) => {
   return (
-    <div className="panel-card">
+    <div className="panel-card lora-topology-card">
       <div className="panel-header">
         <div className="panel-title-group">
           <Radio size={18} color="#3b82f6" />
-          <h2 className="panel-title">LoRa Multi-Hop Mesh Topology</h2>
+          <h2 className="panel-title">LoRa Multi-Hop Mesh Network Visualization</h2>
         </div>
         <span className="panel-badge">GATEWAY: NODE-5 (ESP32-S3)</span>
       </div>
 
-      <div className="lora-topology-box">
-        <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontFamily: 'JetBrains Mono', marginBottom: '0.5rem' }}>
-          MULTI-HOP LORA SIGNAL PROPAGATION CHAIN (868 MHz / 433 MHz):
+      {/* Logical Multi-Hop Route (Point 6) */}
+      <div className="lora-route-flow-container">
+        <div className="route-flow-label">
+          LOGICAL MULTI-HOP TELEMETRY PROPAGATION ROUTE:
         </div>
 
-        <div className="topology-nodes-strip">
-          <div className="topology-track-line" />
-
+        <div className="route-flow-chain">
           {nodes.map((node, index) => {
             const isDanger = node.status === 'DANGER';
             const isWarning = node.status === 'WARNING';
             const isGateway = node.node === 'NODE-5';
             const isSelected = node.node === selectedNodeId;
 
-            let roleLabel = 'SAFE';
-            if (node.node === 'NODE-1') roleLabel = 'REAL HW';
-            else if (isGateway) roleLabel = 'GATEWAY';
-            else if (isDanger) roleLabel = 'CRITICAL';
-            else if (isWarning) roleLabel = 'WARN GAS';
+            let roleName = 'INTRICATE MESH';
+            if (node.node === 'NODE-1') roleName = 'REAL WOKWI HW';
+            else if (isGateway) roleName = 'NODE-5 GATEWAY';
+            else if (isDanger) roleName = 'EMERGENCY 3s';
+            else if (isWarning) roleName = 'GAS WARN 15s';
 
             return (
               <React.Fragment key={node.node}>
                 <div
-                  className={`topology-node-pill ${isDanger ? 'is-critical' : ''} ${
-                    isWarning ? 'is-warning' : ''
-                  } ${isGateway ? 'is-gateway' : ''}`}
-                  style={
-                    isSelected
-                      ? {
-                          borderColor: '#38bdf8',
-                          boxShadow: '0 0 16px rgba(56,189,248,0.5)',
-                          transform: 'translateY(-3px)',
-                        }
-                      : {}
-                  }
+                  className={`mesh-node-box ${isDanger ? 'danger' : isWarning ? 'warning' : 'safe'} ${
+                    isSelected ? 'selected' : ''
+                  }`}
                   onClick={() => onSelectNode(node.latitude, node.longitude, node.node)}
-                  title={`Click to focus ${node.node} across Surface Map & Underground Strata`}
+                  title={`Click to focus ${node.node}`}
                 >
-                  <span className="topo-node-id">{node.node}</span>
-                  <span className="topo-node-role">{roleLabel}</span>
+                  <div className="node-id-txt">{node.node}</div>
+                  <div className="node-role-txt">{roleName}</div>
+                  <div className="node-status-txt">
+                    <span className={`status-pill ${node.status.toLowerCase()}`}>{node.status}</span>
+                  </div>
+                  <div className="node-tx-txt">TX: {node.sample_interval_seconds}s</div>
                 </div>
-                {index < nodes.length - 1 && <span className="hop-arrow">➔</span>}
+
+                <div className="hop-connector">
+                  <div className={`signal-wave ${isDanger ? 'active-rapid' : 'active-normal'}`} />
+                  <ArrowRight size={14} className="hop-arrow-icon" />
+                </div>
               </React.Fragment>
             );
           })}
+
+          {/* Gateway -> Dashboard */}
+          <div className="mesh-gateway-box">
+            <Server size={18} color="#38bdf8" />
+            <div className="gw-title">NODE-5 GATEWAY</div>
+            <div className="gw-ip">http://localhost:8180</div>
+          </div>
+
+          <div className="hop-connector">
+            <ArrowRight size={14} className="hop-arrow-icon" />
+          </div>
+
+          <div className="mesh-dashboard-box">
+            <Laptop size={18} color="#10b981" />
+            <div className="db-title">DASHBOARD</div>
+            <div className="db-port">Port 5173</div>
+          </div>
         </div>
       </div>
 
-      {/* Network Metrics Footer */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.5rem' }}>
-        <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '0.6rem 0.8rem' }}>
-          <div style={{ fontSize: '0.68rem', color: '#64748b', fontFamily: 'JetBrains Mono' }}>ROUTING PROTOCOL</div>
-          <div style={{ fontFamily: 'Chakra Petch', fontSize: '1.05rem', fontWeight: 700, color: '#10b981' }}>
-            MULTI-HOP CHAIN
-          </div>
+      {/* Active Transmission Highlight Banner (Point 6) */}
+      <div className="active-packet-highlight">
+        <div className="highlight-pill">
+          <Wifi size={14} className="pulse-cyan" />
+          <span>
+            ACTIVE ROUTE HIGHLIGHT: <strong>NODE-3 ─────► NODE-4 ─────► NODE-5 (GATEWAY) ─────► DASHBOARD</strong>
+          </span>
         </div>
-
-        <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '0.6rem 0.8rem' }}>
-          <div style={{ fontSize: '0.68rem', color: '#64748b', fontFamily: 'JetBrains Mono' }}>GATEWAY ENDPOINT</div>
-          <div style={{ fontFamily: 'JetBrains Mono', fontSize: '0.85rem', fontWeight: 600, color: '#38bdf8' }}>
-            GET /api/nodes
-          </div>
+        <div className="highlight-note">
+          ⚠️ <em>Prototype Note:</em> In this Wokwi simulation, this LoRa multi-hop behavior is software-emulated in firmware across the 5 logical node state-machines, feeding the Node-5 WebServer /api/nodes.
         </div>
       </div>
     </div>

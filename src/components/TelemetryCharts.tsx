@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Chart, registerables } from 'chart.js';
-import { TrendingUp, Flame } from 'lucide-react';
+import { TrendingUp, Activity, Compass, Wind, Gauge, Weight, Thermometer } from 'lucide-react';
 import { NodeData } from '../types';
 
 Chart.register(...registerables);
@@ -9,240 +9,219 @@ interface TelemetryChartsProps {
   nodes: NodeData[];
 }
 
-export const TelemetryCharts: React.FC<TelemetryChartsProps> = ({ nodes }) => {
-  const tiltCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const gasTempCanvasRef = useRef<HTMLCanvasElement | null>(null);
+type MetricType = 'TILT' | 'GAS' | 'PRESSURE' | 'LOAD' | 'RISK' | 'TEMPERATURE';
 
-  const tiltChartRef = useRef<Chart | null>(null);
-  const gasTempChartRef = useRef<Chart | null>(null);
+export const TelemetryCharts: React.FC<TelemetryChartsProps> = ({ nodes }) => {
+  const [selectedMetric, setSelectedMetric] = useState<MetricType>('TILT');
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const chartInstanceRef = useRef<Chart | null>(null);
 
   const historyRef = useRef<{
     labels: string[];
-    tilts: { [key: string]: number[] };
-    maxGas: number[];
-    maxTemp: number[];
+    data: { [nodeId: string]: { [metric: string]: number[] } };
   }>({
     labels: [],
-    tilts: { 'NODE-1': [], 'NODE-2': [], 'NODE-3': [], 'NODE-4': [], 'NODE-5': [] },
-    maxGas: [],
-    maxTemp: [],
+    data: {
+      'NODE-1': { TILT: [], GAS: [], PRESSURE: [], LOAD: [], RISK: [], TEMPERATURE: [] },
+      'NODE-2': { TILT: [], GAS: [], PRESSURE: [], LOAD: [], RISK: [], TEMPERATURE: [] },
+      'NODE-3': { TILT: [], GAS: [], PRESSURE: [], LOAD: [], RISK: [], TEMPERATURE: [] },
+      'NODE-4': { TILT: [], GAS: [], PRESSURE: [], LOAD: [], RISK: [], TEMPERATURE: [] },
+      'NODE-5': { TILT: [], GAS: [], PRESSURE: [], LOAD: [], RISK: [], TEMPERATURE: [] },
+    },
   });
 
+  // Record incoming telemetry sample
   useEffect(() => {
-    if (!tiltCanvasRef.current || !gasTempCanvasRef.current) return;
+    const timeLabel = new Date().toLocaleTimeString().split(' ')[0];
+    const h = historyRef.current;
 
-    const commonScales = {
-      x: {
-        grid: { color: 'rgba(255, 255, 255, 0.05)' },
-        ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 9 } },
-      },
-      y: {
-        grid: { color: 'rgba(255, 255, 255, 0.05)' },
-        ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 10 } },
-      },
-    };
+    h.labels.push(timeLabel);
+    if (h.labels.length > 25) h.labels.shift();
 
-    // 1. Tilt Chart
-    tiltChartRef.current = new Chart(tiltCanvasRef.current, {
-      type: 'line',
-      data: {
-        labels: historyRef.current.labels,
-        datasets: [
-          {
-            label: 'NODE-1 Tilt (°)',
-            data: historyRef.current.tilts['NODE-1'],
-            borderColor: '#10b981',
-            tension: 0.3,
-            borderWidth: 1.5,
-            pointRadius: 1,
-          },
-          {
-            label: 'NODE-2 Tilt (°)',
-            data: historyRef.current.tilts['NODE-2'],
-            borderColor: '#38bdf8',
-            tension: 0.3,
-            borderWidth: 1.5,
-            pointRadius: 1,
-          },
-          {
-            label: 'NODE-3 Tilt (° - CRITICAL ZONE)',
-            data: historyRef.current.tilts['NODE-3'],
-            borderColor: '#ef4444',
-            backgroundColor: 'rgba(239, 68, 68, 0.12)',
-            tension: 0.3,
-            borderWidth: 2.5,
-            pointRadius: 3,
-          },
-          {
-            label: 'NODE-4 Tilt (°)',
-            data: historyRef.current.tilts['NODE-4'],
-            borderColor: '#8b5cf6',
-            tension: 0.3,
-            borderWidth: 1.5,
-            pointRadius: 1,
-          },
-          {
-            label: 'NODE-5 Tilt (°)',
-            data: historyRef.current.tilts['NODE-5'],
-            borderColor: '#06b6d4',
-            tension: 0.3,
-            borderWidth: 1.5,
-            pointRadius: 1,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: { duration: 300 },
-        plugins: {
-          legend: {
-            position: 'top',
-            labels: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } },
-          },
-        },
-        scales: {
-          ...commonScales,
-          y: {
-            ...commonScales.y,
-            title: { display: true, text: 'Tilt (Degrees)', color: '#94a3b8' },
-            suggestedMin: 0,
-            suggestedMax: 6,
-          },
-        },
-      },
+    nodes.forEach((n) => {
+      const rec = h.data[n.node];
+      if (!rec) return;
+
+      rec.TILT.push(n.tilt_deg);
+      rec.GAS.push(n.gas_ppm_equiv);
+      rec.PRESSURE.push(n.pressure);
+      rec.LOAD.push(n.load_kg);
+      rec.RISK.push(n.risk_score);
+      rec.TEMPERATURE.push(n.temperature);
+
+      if (rec.TILT.length > 25) rec.TILT.shift();
+      if (rec.GAS.length > 25) rec.GAS.shift();
+      if (rec.PRESSURE.length > 25) rec.PRESSURE.shift();
+      if (rec.LOAD.length > 25) rec.LOAD.shift();
+      if (rec.RISK.length > 25) rec.RISK.shift();
+      if (rec.TEMPERATURE.length > 25) rec.TEMPERATURE.shift();
     });
 
-    // 2. Gas & Temp Chart
-    gasTempChartRef.current = new Chart(gasTempCanvasRef.current, {
+    if (chartInstanceRef.current) {
+      chartInstanceRef.current.update('none');
+    }
+  }, [nodes]);
+
+  // Rebuild chart when metric changes or on initial mount
+  useEffect(() => {
+    if (!canvasRef.current) return;
+
+    if (chartInstanceRef.current) {
+      chartInstanceRef.current.destroy();
+      chartInstanceRef.current = null;
+    }
+
+    const nodeColors: { [key: string]: { border: string; bg: string } } = {
+      'NODE-1': { border: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' },
+      'NODE-2': { border: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' },
+      'NODE-3': { border: '#ef4444', bg: 'rgba(239, 68, 68, 0.2)' },
+      'NODE-4': { border: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)' },
+      'NODE-5': { border: '#06b6d4', bg: 'rgba(6, 182, 212, 0.1)' },
+    };
+
+    const metricLabels: { [key in MetricType]: { title: string; unit: string } } = {
+      TILT: { title: 'Inclinometer Angular Tilt', unit: '°' },
+      GAS: { title: 'Gas Concentration Equivalent', unit: 'ppm-eq' },
+      PRESSURE: { title: 'Barometric Pressure', unit: 'Pa' },
+      LOAD: { title: 'Roof Strata Load Cell', unit: 'kg' },
+      RISK: { title: 'Composite Risk Score', unit: '/100' },
+      TEMPERATURE: { title: 'Ambient Temperature', unit: '°C' },
+    };
+
+    const datasets = ['NODE-1', 'NODE-2', 'NODE-3', 'NODE-4', 'NODE-5'].map((nodeId) => {
+      const isCrit = nodeId === 'NODE-3';
+      return {
+        label: `${nodeId} (${metricLabels[selectedMetric].unit})`,
+        data: historyRef.current.data[nodeId]?.[selectedMetric] || [],
+        borderColor: nodeColors[nodeId].border,
+        backgroundColor: isCrit ? nodeColors[nodeId].bg : 'transparent',
+        borderWidth: isCrit ? 2.5 : 1.5,
+        pointRadius: isCrit ? 3 : 1.5,
+        tension: 0.3,
+        fill: isCrit,
+      };
+    });
+
+    chartInstanceRef.current = new Chart(canvasRef.current, {
       type: 'line',
       data: {
         labels: historyRef.current.labels,
-        datasets: [
-          {
-            label: 'Peak Gas Indicator (ppm-equiv)',
-            data: historyRef.current.maxGas,
-            borderColor: '#f59e0b',
-            backgroundColor: 'rgba(245, 158, 11, 0.1)',
-            yAxisID: 'yGas',
-            tension: 0.3,
-            borderWidth: 2,
-            pointRadius: 2,
-          },
-          {
-            label: 'Peak Temperature (°C)',
-            data: historyRef.current.maxTemp,
-            borderColor: '#ec4899',
-            yAxisID: 'yTemp',
-            tension: 0.3,
-            borderWidth: 2,
-            borderDash: [5, 5],
-            pointRadius: 2,
-          },
-        ],
+        datasets,
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        animation: { duration: 300 },
+        animation: { duration: 250 },
+        scales: {
+          x: {
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 9 } },
+          },
+          y: {
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: {
+              color: '#64748b',
+              font: { family: 'JetBrains Mono', size: 10 },
+            },
+          },
+        },
         plugins: {
           legend: {
             position: 'top',
-            labels: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } },
+            labels: {
+              color: '#cbd5e1',
+              font: { family: 'JetBrains Mono', size: 11 },
+              boxWidth: 12,
+            },
           },
-        },
-        scales: {
-          x: commonScales.x,
-          yGas: {
-            type: 'linear',
-            position: 'left',
-            grid: { color: 'rgba(255, 255, 255, 0.05)' },
-            ticks: { color: '#f59e0b' },
-            title: { display: true, text: 'Gas (ppm-equiv)', color: '#f59e0b' },
-            suggestedMin: 0,
-            suggestedMax: 15000,
-          },
-          yTemp: {
-            type: 'linear',
-            position: 'right',
-            grid: { drawOnChartArea: false },
-            ticks: { color: '#ec4899' },
-            title: { display: true, text: 'Temp (°C)', color: '#ec4899' },
-            suggestedMin: 20,
-            suggestedMax: 50,
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            titleFont: { family: 'Chakra Petch', size: 12 },
+            bodyFont: { family: 'JetBrains Mono', size: 11 },
+            borderColor: 'rgba(56, 189, 248, 0.3)',
+            borderWidth: 1,
           },
         },
       },
     });
 
     return () => {
-      tiltChartRef.current?.destroy();
-      gasTempChartRef.current?.destroy();
-    };
-  }, []);
-
-  // Ingest incoming node telemetry
-  useEffect(() => {
-    if (!nodes.length) return;
-    const timeLabel = new Date().toLocaleTimeString().split(' ')[0];
-
-    const hist = historyRef.current;
-    if (hist.labels.length >= 20) {
-      hist.labels.shift();
-      Object.keys(hist.tilts).forEach((k) => hist.tilts[k].shift());
-      hist.maxGas.shift();
-      hist.maxTemp.shift();
-    }
-
-    hist.labels.push(timeLabel);
-
-    let peakGas = 0;
-    let peakTemp = 0;
-
-    nodes.forEach((n) => {
-      if (hist.tilts[n.node]) {
-        hist.tilts[n.node].push(n.tilt_deg);
+      if (chartInstanceRef.current) {
+        chartInstanceRef.current.destroy();
+        chartInstanceRef.current = null;
       }
-      if (n.gas_ppm_equiv > peakGas) peakGas = n.gas_ppm_equiv;
-      if (n.temperature > peakTemp) peakTemp = n.temperature;
-    });
-
-    hist.maxGas.push(peakGas);
-    hist.maxTemp.push(peakTemp);
-
-    tiltChartRef.current?.update('none');
-    gasTempChartRef.current?.update('none');
-  }, [nodes]);
+    };
+  }, [selectedMetric]);
 
   return (
-    <section className="charts-grid">
-      {/* Subsidence Tilt Chart */}
-      <div className="panel-card">
-        <div className="panel-header">
-          <div className="panel-title-group">
-            <TrendingUp size={18} color="#ef4444" />
-            <h2 className="panel-title">Multi-Node Subsidence Tilt Displacement Trend</h2>
-          </div>
-          <span className="panel-badge">MPU-6050 INCLINOMETERS</span>
+    <div className="panel-card telemetry-trends-card">
+      <div className="panel-header">
+        <div className="panel-title-group">
+          <TrendingUp size={18} color="#38bdf8" />
+          <h2 className="panel-title">Mine Strata & Environmental Telemetry Trends</h2>
         </div>
-        <div className="chart-wrapper">
-          <canvas ref={tiltCanvasRef} />
-        </div>
+        <span className="panel-badge">LIVE 25-SAMPLE WINDOW</span>
       </div>
 
-      {/* Gas & Temperature Chart */}
-      <div className="panel-card">
-        <div className="panel-header">
-          <div className="panel-title-group">
-            <Flame size={18} color="#f59e0b" />
-            <h2 className="panel-title">Gas Level Indicator (MQ-2) vs Ambient Temperature</h2>
-          </div>
-          <span className="panel-badge">ENVIRONMENTAL CORRELATION</span>
-        </div>
-        <div className="chart-wrapper">
-          <canvas ref={gasTempCanvasRef} />
-        </div>
+      {/* 6 Metric Selectors Strip (Point 9) */}
+      <div className="metric-toggle-strip">
+        <button
+          className={`metric-btn ${selectedMetric === 'TILT' ? 'active' : ''}`}
+          onClick={() => setSelectedMetric('TILT')}
+        >
+          <Compass size={13} />
+          Tilt Trend (°)
+        </button>
+
+        <button
+          className={`metric-btn ${selectedMetric === 'GAS' ? 'active' : ''}`}
+          onClick={() => setSelectedMetric('GAS')}
+        >
+          <Wind size={13} />
+          Gas Trend (ppm)
+        </button>
+
+        <button
+          className={`metric-btn ${selectedMetric === 'PRESSURE' ? 'active' : ''}`}
+          onClick={() => setSelectedMetric('PRESSURE')}
+        >
+          <Gauge size={13} />
+          Pressure Trend (Pa)
+        </button>
+
+        <button
+          className={`metric-btn ${selectedMetric === 'LOAD' ? 'active' : ''}`}
+          onClick={() => setSelectedMetric('LOAD')}
+        >
+          <Weight size={13} />
+          Roof Load Trend (kg)
+        </button>
+
+        <button
+          className={`metric-btn ${selectedMetric === 'RISK' ? 'active' : ''}`}
+          onClick={() => setSelectedMetric('RISK')}
+        >
+          <Activity size={13} />
+          Risk Score (/100)
+        </button>
+
+        <button
+          className={`metric-btn ${selectedMetric === 'TEMPERATURE' ? 'active' : ''}`}
+          onClick={() => setSelectedMetric('TEMPERATURE')}
+        >
+          <Thermometer size={13} />
+          Temperature Trend (°C)
+        </button>
       </div>
-    </section>
+
+      <div style={{ position: 'relative', height: '320px', width: '100%', marginTop: '0.85rem' }}>
+        <canvas ref={canvasRef} />
+      </div>
+
+      <div className="chart-notes-footer">
+        <span>● <strong>NODE-3 (Fault Shear Zone)</strong> is emphasized with red emergency envelope</span>
+        <span>● Multi-Hop Cadence: DANGER (3s), WARNING (15s), SAFE (40s)</span>
+      </div>
+    </div>
   );
 };

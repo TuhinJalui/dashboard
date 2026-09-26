@@ -1,5 +1,5 @@
 import React from 'react';
-import { Cpu, ShieldAlert, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Cpu, ShieldAlert, CheckCircle, AlertTriangle, ArrowDown, HelpCircle, TrendingUp, Navigation, AlertOctagon } from 'lucide-react';
 import { AIAnalysisSummary } from '../types';
 
 interface AiAdvisorPanelProps {
@@ -11,15 +11,28 @@ export const AiAdvisorPanel: React.FC<AiAdvisorPanelProps> = ({ analysis }) => {
   const isWarning = analysis.status === 'WARNING';
 
   return (
-    <div className="panel-card">
+    <div className="panel-card ai-advisor-panel">
       <div className="panel-header">
         <div className="panel-title-group">
           <Cpu size={18} color="#06b6d4" />
-          <h2 className="panel-title">AI Geotechnical Advisory & Anomaly Intelligence</h2>
+          <h2 className="panel-title">AI Geotechnical Safety Advisor & Structural Reasoning</h2>
         </div>
         <span className="panel-badge">
-          VELOCITY: {analysis.subsidenceVelocityDegPerHr.toFixed(2)}°/hr
+          RATE: {analysis.subsidenceVelocityDegPerHr.toFixed(2)}°/hr
         </span>
+      </div>
+
+      {/* Firmware-First Pipeline Flow Banner (Point 10) */}
+      <div className="ai-pipeline-banner">
+        <span className="pipe-step">SENSORS</span>
+        <span className="pipe-arrow">➔</span>
+        <span className="pipe-step">FIRMWARE RISK LOGIC</span>
+        <span className="pipe-arrow">➔</span>
+        <span className="pipe-step">GATEWAY JSON</span>
+        <span className="pipe-arrow">➔</span>
+        <span className="pipe-step">DASHBOARD</span>
+        <span className="pipe-arrow">➔</span>
+        <span className="pipe-step active">AI ANALYSIS</span>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
@@ -47,33 +60,80 @@ export const AiAdvisorPanel: React.FC<AiAdvisorPanelProps> = ({ analysis }) => {
           </span>
         </div>
 
-        {/* Geotechnical Interpretation */}
-        <p style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: '1.5' }}>
-          {analysis.geotechnicalInterpretation}
-        </p>
-
-        {/* Primary Risk Drivers */}
-        <div style={{ background: 'rgba(10, 14, 26, 0.6)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', padding: '0.75rem' }}>
-          <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontFamily: 'JetBrains Mono', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
-            Identified Risk Contributors:
+        {/* 4 Core Q&A Cards (Point 10) */}
+        <div className="ai-qa-grid">
+          {/* Q1: Why is NODE-3 dangerous? */}
+          <div className="ai-qa-card">
+            <div className="qa-header">
+              <HelpCircle size={14} color="#ef4444" />
+              <span>Why is {analysis.criticalNodeId || 'this node'} dangerous?</span>
+            </div>
+            <div className="qa-body">
+              {isDanger ? (
+                <>
+                  <strong>{analysis.criticalNodeId || 'NODE-3'}</strong> is currently classified as <strong>DANGER</strong> because{' '}
+                  five monitored parameters are simultaneously at warning level: temperature, pressure, gas, tilt, and load.
+                  The node is therefore operating at the highest monitoring frequency of 3 seconds.
+                </>
+              ) : isWarning ? (
+                <>
+                  {analysis.criticalNodeId || 'NODE-2'} is at <strong>WARNING</strong> because elevated gas indicators (8,500 ppm-eq)
+                  were recorded. Telemetry cadence automatically increased to 15 seconds.
+                </>
+              ) : (
+                <>All monitored nodes are in SAFE equilibrium within DGMS standards (&lt;3° tilt, &lt;5kg load, &lt;7500ppm gas).</>
+              )}
+            </div>
           </div>
-          <ul style={{ listStyleType: 'disc', paddingLeft: '1.2rem', fontSize: '0.8rem', color: '#e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-            {analysis.primaryRiskDrivers.map((driver, idx) => (
-              <li key={idx}>{driver}</li>
-            ))}
-          </ul>
-        </div>
 
-        {/* Action Recommendations */}
-        <div style={{ background: 'rgba(10, 14, 26, 0.6)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', padding: '0.75rem' }}>
-          <div style={{ fontSize: '0.72rem', color: '#38bdf8', fontFamily: 'JetBrains Mono', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
-            Recommended Mine Action Plan:
+          {/* Q2: Which node needs immediate attention? */}
+          <div className="ai-qa-card">
+            <div className="qa-header">
+              <Navigation size={14} color="#38bdf8" />
+              <span>Which node needs immediate attention?</span>
+            </div>
+            <div className="qa-body">
+              {analysis.criticalNodeId ? (
+                <>
+                  Priority Station: <strong>{analysis.criticalNodeId}</strong> located at GPS coordinates{' '}
+                  <strong>(19.054900, 73.069300)</strong> in Sector 3 Fault Shear Zone.
+                  Acoustic direction-finding beacon is sounding on this node only.
+                </>
+              ) : (
+                <>No priority evacuation required. Routine multi-hop monitoring active on all stations.</>
+              )}
+            </div>
           </div>
-          <ul style={{ listStyleType: 'circle', paddingLeft: '1.2rem', fontSize: '0.8rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-            {analysis.recommendedAction.map((action, idx) => (
-              <li key={idx}>{action}</li>
-            ))}
-          </ul>
+
+          {/* Q3: What parameters are changing? */}
+          <div className="ai-qa-card">
+            <div className="qa-header">
+              <TrendingUp size={14} color="#f59e0b" />
+              <span>What parameters are changing?</span>
+            </div>
+            <div className="qa-body">
+              <ul style={{ paddingLeft: '1rem', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                {analysis.primaryRiskDrivers.map((driver, idx) => (
+                  <li key={idx}>{driver}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Q4: Recommended Mine Action Plan */}
+          <div className="ai-qa-card">
+            <div className="qa-header">
+              <AlertOctagon size={14} color="#10b981" />
+              <span>Recommended DGMS Action Protocol:</span>
+            </div>
+            <div className="qa-body">
+              <ul style={{ paddingLeft: '1rem', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                {analysis.recommendedAction.map((action, idx) => (
+                  <li key={idx}>{action}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     </div>

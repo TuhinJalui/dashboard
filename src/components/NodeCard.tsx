@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, BatteryCharging, Radio, Volume2 } from 'lucide-react';
+import { MapPin, BatteryCharging, Radio, Volume2, Activity, ShieldAlert, Cpu } from 'lucide-react';
 import { NodeData } from '../types';
 
 interface NodeCardProps {
@@ -26,171 +26,159 @@ export const NodeCard: React.FC<NodeCardProps> = ({ node, isSelected, onFocusMap
 
   const isHardware = node.node === 'NODE-1';
   const isGateway = node.node === 'NODE-5';
-  const roleLabel = isHardware ? 'REAL HARDWARE SENSORS' : isGateway ? 'GATEWAY NODE' : 'VIRTUAL TELEMETRY';
+  const roleLabel = isHardware
+    ? 'REAL WOKWI SENSORS'
+    : isGateway
+    ? 'GATEWAY NODE'
+    : node.role || 'VIRTUAL TELEMETRY';
 
   // Pressure drop % calculation
   const baseline = node.pressureBaseline || 101325;
   const dropPct = (((baseline - node.pressure) / baseline) * 100).toFixed(1);
 
+  // Adaptive TX Interval text
+  const txBadge =
+    node.sample_interval_seconds === 3
+      ? '⚡ 3 sec (HIGH FREQUENCY)'
+      : node.sample_interval_seconds === 15
+      ? '15 sec (INCREASED)'
+      : '40 sec (NORMAL BASELINE)';
+
   return (
     <div
-      className={`node-card ${cardClass}`}
-      style={
-        isSelected
-          ? {
-              borderColor: '#38bdf8',
-              boxShadow: '0 0 20px rgba(56,189,248,0.3)',
-              transform: 'translateY(-3px)',
-            }
-          : {}
-      }
+      className={`node-card-advanced ${cardClass} ${isSelected ? 'selected' : ''}`}
       onClick={() => onFocusMap(node.latitude, node.longitude, node.node)}
     >
-      <div className="node-card-header">
-        <div className="node-title-group">
-          <div className="node-badge-row">
-            <span className="node-name">{node.node}</span>
-            <span className="node-type-tag">{roleLabel}</span>
-            {isSelected && (
-              <span
-                style={{
-                  background: '#0ea5e9',
-                  color: '#ffffff',
-                  fontSize: '9px',
-                  fontWeight: 800,
-                  borderRadius: '3px',
-                  padding: '1px 5px',
-                  fontFamily: 'JetBrains Mono',
-                }}
-              >
-                SELECTED
+      {/* 1. Header with Node ID, Role & Status Pill */}
+      <div className="card-top-bar">
+        <div className="card-id-block">
+          <div className="card-title-row">
+            <span className="card-node-id">{node.node}</span>
+            {isGateway && <span className="gateway-indicator-tag">GATEWAY</span>}
+            {isHardware && <span className="hardware-indicator-tag">LIVE HARDWARE</span>}
+            {isSelected && <span className="selected-tag">SELECTED</span>}
+          </div>
+          <div className="card-role-text">{roleLabel}</div>
+        </div>
+
+        <div className="card-status-badge-wrapper">
+          <span className={`node-status-pill ${pillClass}`}>{node.status}</span>
+        </div>
+      </div>
+
+      {/* 2. Risk Score & Adaptive TX Strip */}
+      <div className="card-risk-tx-strip">
+        <div className="risk-score-box">
+          <div className="risk-score-header">
+            <span className="risk-lbl">RISK SCORE</span>
+            <span className="risk-num">{node.risk_score} / 100</span>
+          </div>
+          <div className="risk-track">
+            <div className={`risk-bar ${fillClass}`} style={{ width: `${Math.max(5, node.risk_score)}%` }} />
+          </div>
+        </div>
+
+        <div className={`tx-interval-badge ${node.sample_interval_seconds === 3 ? 'emergency' : ''}`}>
+          <Radio size={12} />
+          <span>TX: {txBadge}</span>
+        </div>
+      </div>
+
+      {/* 3. Sensor Counts: Warning vs Critical (Point 2 & 3) */}
+      <div className="sensor-counts-banner">
+        <span className="count-pill warn">
+          ⚠️ Warnings: <strong>{node.warning_sensors}</strong>
+        </span>
+        <span className="count-pill crit">
+          🛑 Critical: <strong>{node.critical_sensors}</strong>
+        </span>
+        <span className="count-pill pkts">
+          <Activity size={11} /> {node.packets_sent} pkts sent
+        </span>
+      </div>
+
+      {/* 4. Sensor Section: Environment & Structural with states beside each (Point 4) */}
+      <div className="sensors-grouped-container">
+        {/* Environment Group */}
+        <div className="sensor-category">
+          <div className="cat-title">ENVIRONMENT</div>
+          <div className="sensor-rows-list">
+            {/* Temperature */}
+            <div className={`sensor-item-row ${states.temperature !== 'NORMAL' ? 'warn' : ''}`}>
+              <span className="s-label">Temperature</span>
+              <span className="s-val">{node.temperature.toFixed(1)} °C</span>
+              <span className={`s-state ${states.temperature === 'CRITICAL_SENSOR' ? 'crit' : states.temperature === 'WARNING_SENSOR' ? 'warn' : 'norm'}`}>
+                {states.temperature === 'CRITICAL_SENSOR' ? 'CRITICAL' : states.temperature === 'WARNING_SENSOR' ? 'WARNING' : 'NORMAL'}
               </span>
-            )}
-          </div>
-          <div
-            className="node-gps-loc"
-            style={{ cursor: 'pointer' }}
-            title="Click to view on GIS map & Subsurface Strata"
-          >
-            <MapPin size={12} />
-            {node.latitude.toFixed(6)}, {node.longitude.toFixed(6)}
-          </div>
-        </div>
-        <span className={`node-status-pill ${pillClass}`}>{node.status}</span>
-      </div>
+            </div>
 
-      {/* Risk Score Progress Bar */}
-      <div className="risk-meter-wrapper">
-        <div className="risk-meter-header">
-          <span>RISK SCORE</span>
-          <span className="risk-meter-val">{node.risk_score} / 100</span>
-        </div>
-        <div className="risk-bar-track">
-          <div className={`risk-bar-fill ${fillClass}`} style={{ width: `${Math.max(4, node.risk_score)}%` }} />
-        </div>
-      </div>
+            {/* Humidity */}
+            <div className="sensor-item-row">
+              <span className="s-label">Humidity</span>
+              <span className="s-val">{node.humidity.toFixed(1)} %</span>
+              <span className="s-state norm">NORMAL</span>
+            </div>
 
-      {/* 6 Sensors Grid */}
-      <div className="node-sensors-grid">
-        {/* Tilt */}
-        <div className={`sensor-box ${states.tilt === 'CRITICAL_SENSOR' ? 'critical' : states.tilt === 'WARNING_SENSOR' ? 'warn' : ''}`}>
-          <div className="sensor-box-top">
-            <span className="sensor-name">Tilt Angle</span>
-            <span className={`sensor-status-tag ${states.tilt === 'CRITICAL_SENSOR' ? 'critical' : states.tilt === 'WARNING_SENSOR' ? 'warn' : 'normal'}`}>
-              {states.tilt === 'CRITICAL_SENSOR' ? 'CRIT' : states.tilt === 'WARNING_SENSOR' ? 'WARN' : 'NORM'}
-            </span>
-          </div>
-          <div className="sensor-val">
-            {node.tilt_deg.toFixed(2)}
-            <span>°</span>
+            {/* Pressure */}
+            <div className={`sensor-item-row ${states.pressure !== 'NORMAL' ? 'warn' : ''}`}>
+              <span className="s-label">Pressure (-{dropPct}%)</span>
+              <span className="s-val">{node.pressure.toFixed(0)} Pa</span>
+              <span className={`s-state ${states.pressure === 'CRITICAL_SENSOR' ? 'crit' : states.pressure === 'WARNING_SENSOR' ? 'warn' : 'norm'}`}>
+                {states.pressure === 'CRITICAL_SENSOR' ? 'CRITICAL' : states.pressure === 'WARNING_SENSOR' ? 'WARNING' : 'NORMAL'}
+              </span>
+            </div>
+
+            {/* Gas */}
+            <div className={`sensor-item-row ${states.gas !== 'NORMAL' ? 'warn' : ''}`}>
+              <span className="s-label">Gas Concentration</span>
+              <span className="s-val">{node.gas_ppm_equiv.toFixed(0)} ppm-eq</span>
+              <span className={`s-state ${states.gas === 'CRITICAL_SENSOR' ? 'crit' : states.gas === 'WARNING_SENSOR' ? 'warn' : 'norm'}`}>
+                {states.gas === 'CRITICAL_SENSOR' ? 'CRITICAL' : states.gas === 'WARNING_SENSOR' ? 'WARNING' : 'NORMAL'}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Structural Load */}
-        <div className={`sensor-box ${states.load === 'CRITICAL_SENSOR' ? 'critical' : states.load === 'WARNING_SENSOR' ? 'warn' : ''}`}>
-          <div className="sensor-box-top">
-            <span className="sensor-name">Roof Load</span>
-            <span className={`sensor-status-tag ${states.load === 'CRITICAL_SENSOR' ? 'critical' : states.load === 'WARNING_SENSOR' ? 'warn' : 'normal'}`}>
-              {states.load === 'CRITICAL_SENSOR' ? 'CRIT' : states.load === 'WARNING_SENSOR' ? 'WARN' : 'NORM'}
-            </span>
-          </div>
-          <div className="sensor-val">
-            {node.load_kg.toFixed(2)}
-            <span>kg</span>
-          </div>
-        </div>
+        {/* Structural Group */}
+        <div className="sensor-category">
+          <div className="cat-title">STRUCTURAL</div>
+          <div className="sensor-rows-list">
+            {/* Tilt */}
+            <div className={`sensor-item-row ${states.tilt !== 'NORMAL' ? 'warn' : ''}`}>
+              <span className="s-label">Inclinometer Tilt</span>
+              <span className="s-val">{node.tilt_deg.toFixed(2)}°</span>
+              <span className={`s-state ${states.tilt === 'CRITICAL_SENSOR' ? 'crit' : states.tilt === 'WARNING_SENSOR' ? 'warn' : 'norm'}`}>
+                {states.tilt === 'CRITICAL_SENSOR' ? 'CRITICAL' : states.tilt === 'WARNING_SENSOR' ? 'WARNING' : 'NORMAL'}
+              </span>
+            </div>
 
-        {/* Gas Indicator (ppm-equiv) */}
-        <div className={`sensor-box ${states.gas === 'CRITICAL_SENSOR' ? 'critical' : states.gas === 'WARNING_SENSOR' ? 'warn' : ''}`}>
-          <div className="sensor-box-top">
-            <span className="sensor-name">Gas Indicator</span>
-            <span className={`sensor-status-tag ${states.gas === 'CRITICAL_SENSOR' ? 'critical' : states.gas === 'WARNING_SENSOR' ? 'warn' : 'normal'}`}>
-              {states.gas === 'CRITICAL_SENSOR' ? 'CRIT' : states.gas === 'WARNING_SENSOR' ? 'WARN' : 'NORM'}
-            </span>
-          </div>
-          <div className="sensor-val">
-            {node.gas_ppm_equiv.toFixed(0)}
-            <span>ppm-eq</span>
-          </div>
-        </div>
-
-        {/* Temperature */}
-        <div className={`sensor-box ${states.temperature === 'CRITICAL_SENSOR' ? 'critical' : states.temperature === 'WARNING_SENSOR' ? 'warn' : ''}`}>
-          <div className="sensor-box-top">
-            <span className="sensor-name">Temperature</span>
-            <span className={`sensor-status-tag ${states.temperature === 'CRITICAL_SENSOR' ? 'critical' : states.temperature === 'WARNING_SENSOR' ? 'warn' : 'normal'}`}>
-              {states.temperature === 'CRITICAL_SENSOR' ? 'CRIT' : states.temperature === 'WARNING_SENSOR' ? 'WARN' : 'NORM'}
-            </span>
-          </div>
-          <div className="sensor-val">
-            {node.temperature.toFixed(1)}
-            <span>°C</span>
-          </div>
-        </div>
-
-        {/* Pressure & Drop % */}
-        <div className={`sensor-box ${states.pressure === 'CRITICAL_SENSOR' ? 'critical' : states.pressure === 'WARNING_SENSOR' ? 'warn' : ''}`}>
-          <div className="sensor-box-top">
-            <span className="sensor-name">Pressure (-{dropPct}%)</span>
-            <span className={`sensor-status-tag ${states.pressure === 'CRITICAL_SENSOR' ? 'critical' : states.pressure === 'WARNING_SENSOR' ? 'warn' : 'normal'}`}>
-              {states.pressure === 'CRITICAL_SENSOR' ? 'CRIT' : states.pressure === 'WARNING_SENSOR' ? 'WARN' : 'NORM'}
-            </span>
-          </div>
-          <div className="sensor-val">
-            {(node.pressure / 100).toFixed(0)}
-            <span>hPa</span>
-          </div>
-        </div>
-
-        {/* Humidity */}
-        <div className="sensor-box">
-          <div className="sensor-box-top">
-            <span className="sensor-name">Humidity</span>
-            <span className="sensor-status-tag normal">NORM</span>
-          </div>
-          <div className="sensor-val">
-            {node.humidity.toFixed(1)}
-            <span>%</span>
+            {/* Load */}
+            <div className={`sensor-item-row ${states.load !== 'NORMAL' ? 'warn' : ''}`}>
+              <span className="s-label">Roof Strata Load</span>
+              <span className="s-val">{node.load_kg.toFixed(2)} kg</span>
+              <span className={`s-state ${states.load === 'CRITICAL_SENSOR' ? 'crit' : states.load === 'WARNING_SENSOR' ? 'warn' : 'norm'}`}>
+                {states.load === 'CRITICAL_SENSOR' ? 'CRITICAL' : states.load === 'WARNING_SENSOR' ? 'WARNING' : 'NORMAL'}
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Card Footer Telemetry */}
-      <div className="node-card-footer">
-        <div className="node-telemetry-badge" title="Simulated battery depletion model">
-          <BatteryCharging size={13} />
-          {node.battery_percent.toFixed(1)}% (Sim)
+      {/* 5. GPS & Battery Footer (Point 8) */}
+      <div className="card-bottom-footer">
+        <div className="gps-loc-chip" title="Click to view on Map">
+          <MapPin size={12} color="#06b6d4" />
+          <span>{node.latitude.toFixed(6)}, {node.longitude.toFixed(6)}</span>
         </div>
 
-        <div className="node-telemetry-badge" title="Adaptive transmission interval">
-          <Radio size={13} />
-          TX: {node.sample_interval_seconds}s
+        <div className="battery-chip" title="Simulated power depletion model">
+          <BatteryCharging size={12} color={node.battery_percent > 60 ? '#10b981' : '#f59e0b'} />
+          <span>Simulated Battery: {node.battery_percent.toFixed(1)}%</span>
         </div>
 
-        {/* Siren only on critical */}
-        <div className={`node-buzzer-indicator ${node.buzzerActive ? 'buzzer-on' : 'buzzer-off'}`}>
-          <Volume2 size={13} />
-          {node.buzzerActive ? '🚨 3kHz SIREN (CRITICAL)' : 'SIREN OFF'}
+        <div className={`buzzer-badge ${node.buzzerActive ? 'buzzer-on' : 'buzzer-off'}`}>
+          <Volume2 size={12} />
+          <span>{node.buzzerActive ? '🚨 3kHz Siren Active' : 'Siren Standby'}</span>
         </div>
       </div>
     </div>

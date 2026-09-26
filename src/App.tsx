@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { CriticalAlertHero } from './components/CriticalAlertHero';
+import { MineOverviewBar } from './components/MineOverviewBar';
+import { AdaptiveTransmissionPanel } from './components/AdaptiveTransmissionPanel';
+import { AlertHistoryTimeline } from './components/AlertHistoryTimeline';
 import { KpiMetrics } from './components/KpiMetrics';
 import { MineMap } from './components/MineMap';
 import { TunnelSchematic } from './components/TunnelSchematic';
@@ -45,6 +48,8 @@ export const App: React.FC = () => {
   const [mode, setMode] = useState<'SIMULATION' | 'LIVE_GATEWAY'>(dataService.getMode());
   const [gatewayUrl, setGatewayUrl] = useState<string>(dataService.getGatewayUrl());
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [isWokwiLive, setIsWokwiLive] = useState<boolean>(false);
+  const [totalPackets, setTotalPackets] = useState<number>(0);
 
   // Enterprise UI Views
   const [activeTab, setActiveTab] = useState<ActiveTab>('GEOSPATIAL_SUBSURFACE');
@@ -53,7 +58,7 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     // Start data service polling/simulation engine
-    dataService.start(1500);
+    dataService.start(1000);
 
     const unsubscribeNodes = dataService.subscribe((updatedNodes, currentAlarm) => {
       setNodes(updatedNodes);
@@ -64,9 +69,19 @@ export const App: React.FC = () => {
       setPackets((prev) => [...prev.slice(-49), newPacket]);
     });
 
+    const unsubscribeConn = dataService.subscribeConnection((status) => {
+      setIsWokwiLive(status.connected);
+      setTotalPackets(status.totalPackets);
+      if (status.connected && mode !== 'LIVE_GATEWAY') {
+        setMode('LIVE_GATEWAY');
+        dataService.setMode('LIVE_GATEWAY');
+      }
+    });
+
     return () => {
       unsubscribeNodes();
       unsubscribePackets();
+      unsubscribeConn();
       dataService.stop();
     };
   }, []);
@@ -115,14 +130,29 @@ export const App: React.FC = () => {
       <Header
         mode={mode}
         gatewayUrl={gatewayUrl}
+        isWokwiLive={isWokwiLive}
+        packetCount={totalPackets}
         onSelectMode={handleSelectMode}
         onOpenGatewayModal={() => setIsModalOpen(true)}
       />
 
-      {/* 2. Critical Alert Hero (Activates on DANGER / WARNING) */}
+      {/* 2. Overall Mine / Network Status Bar (Point 1) */}
+      <MineOverviewBar
+        nodes={nodes}
+        alarm={alarm}
+        gatewayUrl={gatewayUrl}
+        isWokwiLive={isWokwiLive}
+        selectedNodeId={selectedNodeId}
+        onSelectNode={handleSelectStation}
+      />
+
+      {/* 3. Critical Alert Hero (Point 2 & 20: Biggest element on screen) */}
       <CriticalAlertHero alarm={alarm} onFocusMap={handleSelectStation} />
 
-      {/* 3. High-Level KPI Summary Cards */}
+      {/* 4. Adaptive Transmission Strategy Panel (Point 7: USP Indicator) */}
+      <AdaptiveTransmissionPanel nodes={nodes} onSelectNode={handleSelectStation} />
+
+      {/* 5. High-Level KPI Summary Cards */}
       <KpiMetrics nodes={nodes} alarm={alarm} />
 
       {/* 4. Top Primary Navigation Tabs */}
@@ -406,10 +436,11 @@ export const App: React.FC = () => {
         </>
       )}
 
-      {/* TAB 2: TELEMETRY TRENDS */}
+      {/* TAB 2: TELEMETRY TRENDS & EVENT TIMELINE (Point 9) */}
       {activeTab === 'CHARTS' && (
         <>
           <TelemetryCharts nodes={nodes} />
+          <AlertHistoryTimeline nodes={nodes} />
           <NodeTable
             nodes={nodes}
             selectedNodeId={selectedNodeId}
